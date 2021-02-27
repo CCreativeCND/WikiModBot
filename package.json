@@ -1,0 +1,22 @@
+{
+  "name": "WikiModBot",
+  "version": "1.0.0",
+  "description": "A Discord bot interface for interacting with the MediaWiki and Fandom API",
+  "main": "index.js",
+  "dependencies": {
+    "@lavgup/mediawiki.js": "^1.1.0",
+    "discord.js": "^12.5.1",
+    "dotenv": "^8.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "Caburum",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CCreativeCND/WikiModBot.git"
+  }
+}
