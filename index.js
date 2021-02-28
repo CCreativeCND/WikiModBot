@@ -7,14 +7,15 @@ const fs = require('fs');
 const config = require('./config.json')
 const help = require('./help.json')
 
-const MediaWikiJS = require('@lavgup/mediawiki.js');
+const server = 'https://' + config.wiki + '.fandom.com';
+
+const { MediaWikiJS } = require('@lavgup/mediawiki.js');
 const bot = new MediaWikiJS({
-  server: 'https://' + config.wiki + '.fandom.com',
-  path: ''
+  url: server + '/api.php'
 });
 
 async function get(params, callback) {
-  https.get(`https://${config.wiki}.fandom.com/api.php?format=json&` + params, (resp) => {
+  https.get(`https://${bot.url}?format=json&` + params, (resp) => {
     let data = '';
 
     // A chunk of data has been recieved.
@@ -40,7 +41,7 @@ function argument(name, content) {
 client.on('ready', async () => {
   console.log(`Logged in to Discord as ${client.user.tag}`);
   await bot.login(process.env.botUsername, process.env.botPassword);
-  console.log(`Logged in to ${bot.cacheSite.servername} as ${bot.cacheUser.name} (ID ${bot.cacheUser.id})`);
+  console.log(`Logged in to ${bot.api.options.url} as ${bot.api.options.botUsername}`);
 });
 
 client.on('message', async message => {
@@ -68,9 +69,13 @@ client.on('message', async message => {
     case 'ping': {
       const ping = await message.channel.send('Ping?');
       ping.edit(`Pong! Bot latency is ${ping.createdTimestamp - message.createdTimestamp}ms. API Latency is ${Math.round(client.ws.ping)}ms.`);
+      break;
     }
 
     case 'backlink': {
+      /*
+      * @todo Split message if too large
+      */
       get('action=query&list=backlinks&bllimit=500&blnamespace=*&bltitle=' + underscored, function(data) {
         var res = JSON.parse(data);
         var backlinks = res.query.backlinks;
@@ -86,6 +91,7 @@ client.on('message', async message => {
           output = output + obj.title + '\n';
         }
       })
+      break;
     }
 
     case 'block': {
@@ -97,9 +103,9 @@ client.on('message', async message => {
         let embed = new Discord.MessageEmbed()
           .setColor('#C51111')
           .setTitle('Blocked User')
-          .setURL(`${bot.cacheSite.server}/wiki/Special:BlockList`)
+          .setURL(`${server}/wiki/Special:BlockList`)
           .addFields(
-            {name: 'User', value: `[${user}](${bot.cacheSite.server}/wiki/User:${user})`},
+            {name: 'User', value: `[${user}](${server}/wiki/User:${user})`},
             {name: 'Duration', value: duration, inline: true},
             {name: 'Reason', value: reason, inline: true},
           )
@@ -118,20 +124,21 @@ client.on('message', async message => {
 
         message.channel.send(embed);
       }
+      break;
     }
 
     case 'delete': {
       var title = quoted[0];
       quoted.shift();
-      var reason = quoted.join(' ');
+      var reason = quoted.join(' ') || '';
 
       if (title) {
         let embed = new Discord.MessageEmbed()
           .setColor('#C51111')
           .setTitle('Deleted Page')
           .addFields(
-            {name: 'Page', value: `[${title}](${bot.cacheSite.server}/wiki/${title})`},
-            {name: 'Reason', value: reason || '', inline: true},
+            {name: 'Page', value: `[${title}](${server}/wiki/${title})`},
+            {name: 'Reason', value: reason || 'None', inline: true},
           )
           .setTimestamp()
 
@@ -144,6 +151,7 @@ client.on('message', async message => {
 
         message.channel.send(embed);
       }
+      break;
     }
 
     case 'getconfig': {
@@ -152,6 +160,7 @@ client.on('message', async message => {
       } else {
         message.react(config.errorEmoji);
       }
+      break;
     }
 
     case 'setconfig': {
@@ -164,13 +173,15 @@ client.on('message', async message => {
       });
 
       if (key === 'wiki') {
+        bot.logout();
+        const server = 'https://' + config.wiki + '.fandom.com';
         const bot = new MediaWikiJS({
-          server: 'https://' + config.wiki + '.fandom.com',
-          path: ''
+          url: server + '/api.php'
         });
         await bot.login(process.env.botUsername, process.env.botPassword);
-        console.log(`Logged in to ${bot.cacheSite.servername} as ${bot.cacheUser.name} (ID ${bot.cacheUser.id})`);
+        console.log(`Logged in to ${bot.api.options.url} as ${bot.api.options.botUsername}`);
       }
+      break;
     }
 
     case 'categorize': {
@@ -180,15 +191,16 @@ client.on('message', async message => {
       lines.shift()
 
       message.react(config.waitingEmoji);
-      
+
       lines.forEach(title => {
         bot.append({
           title: title,
           content: `[[Category:${category}]]`,
           summary: `Adding ${category} category`,
           minor: true
-      });
+        });
       })
+      break;
     }
 
     case 'protect': {
@@ -202,6 +214,7 @@ client.on('message', async message => {
         reason: quoted[3] || '',
         cascade: false
       });
+      break;
     }
 
     case 'help': {
@@ -233,12 +246,13 @@ client.on('message', async message => {
           .setTitle('Available Commands')
           .setDescription(commands)
           .addFields(
-            {name: 'Wiki', value: `[${bot.cacheSite.servername}](${bot.cacheSite.base})`, inline: true},
-            {name: 'Wiki User', value: `${bot.cacheUser.name} (ID ${bot.cacheUser.id})`, inline: true},
+            {name: 'Wiki', value: `[${bot.api.options.url}](${bot.api.options.url})`, inline: true},
+            {name: 'Wiki User', value: `${bot.api.options.botUsername}`, inline: true},
           )
       }
       message.channel.send(embed);
     }
+    break;
   }
 });
 
