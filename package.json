@@ -13,8 +13,8 @@
     "start": "node index.js"
   },
   "keywords": [],
-  "author": "Caburum",
-  "license": "ISC",
+  "author": "Calum Dingwall (https://github.com/caburum)",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/caburum/WikiModBot.git"
